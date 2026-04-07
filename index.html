@@ -1,95 +1,447 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Route Optimizer</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-body { font-family: Arial; }
-.vehicle-card { cursor:pointer; transition:.3s }
-.vehicle-card.selected { border:2px solid green; background:#ecfdf5 }
-.route-option.active { border-left:4px solid green; background:#ecfdf5 }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Route Optimizer - Fuel Saving</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .vehicle-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .vehicle-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+        
+        .vehicle-card.selected {
+            border-color: #059669;
+            background-color: #ecfdf5;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+        
+        .route-option {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .route-option:hover {
+            transform: translateX(4px);
+            background-color: #f0fdf4;
+        }
+        
+        .route-option.active {
+            background-color: #ecfdf5;
+            border-left: 4px solid #059669;
+            border-color: #a7f3d0;
+        }
+        
+        .route-line {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: all 0.3s ease;
+        }
+        
+        .route-line.eco {
+            stroke: #059669;
+            stroke-dasharray: 5,5;
+            animation: dash 20s linear infinite;
+        }
+        
+        .route-line.fast {
+            stroke: #3b82f6;
+            stroke-dasharray: 10,5;
+            animation: dash 15s linear infinite;
+        }
+        
+        .route-line.short {
+            stroke: #6b7280;
+            stroke-dasharray: 5,10;
+            animation: dash 25s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -100; }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.5); }
+        }
+        
+        .waypoint-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .waypoint-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 50;
+        }
+        
+        .eco-score {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: conic-gradient(#10b981 calc(var(--score, 0) * 3.6deg), #f3f4f6 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .eco-score::before {
+            content: '';
+            position: absolute;
+            width: 2.75rem;
+            height: 2.75rem;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .eco-score__value {
+            position: relative;
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: #047857;
+            z-index: 1;
+        }
+        
+        .savings-badge {
+            background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+        }
+        
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+            border-left: 4px solid #059669;
+        }
+        
+        .input-focus {
+            transition: all 0.15s ease;
+        }
+        
+        .input-focus:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            background-color: white;
+        }
+        
+        .map-grid {
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
 </head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">
 
-<body class="bg-gray-50 p-6">
+    <!-- Header -->
+    <header class="glass-panel sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-route text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold gradient-text">Smart Route Optimizer</h1>
+                        <p class="text-xs text-gray-500">Fuel Efficiency & Cost Saving</p>
+                    </div>
+                </div>
+                
+                <nav class="hidden md:flex space-x-6">
+                    <a href="#" class="text-gray-600 hover:text-emerald-600 font-medium transition text-sm">Planner</a>
+                    <a href="#" class="text-gray-600 hover:text-emerald-600 font-medium transition text-sm">History</a>
+                    <a href="#" class="text-gray-600 hover:text-emerald-600 font-medium transition text-sm">Analytics</a>
+                    <button onclick="exportRoute()" class="text-gray-600 hover:text-emerald-600 font-medium transition text-sm">
+                        <i class="fas fa-download mr-1"></i>Export
+                    </button>
+                </nav>
+                
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 text-gray-500 hover:text-emerald-600 transition relative">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    </button>
+                    <div class="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-semibold text-sm cursor-pointer hover:bg-emerald-200 transition">
+                        JD
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
 
-<h1 class="text-2xl font-bold mb-4">🚗 Smart Route Optimizer</h1>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Panel: Controls -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Vehicle Selection -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 fade-in">
+                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-car text-emerald-500 mr-2"></i>
+                        Select Vehicle
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3" id="vehicleGrid">
+                        <div class="vehicle-card selected" onclick="selectVehicle('sedan')" data-vehicle="sedan">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                                    <i class="fas fa-car-side"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-sm">Sedan</p>
+                                    <p class="text-xs text-gray-500">7.5 L/100km</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="vehicle-card" onclick="selectVehicle('suv')" data-vehicle="suv">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                                    <i class="fas fa-truck-pickup"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-sm">SUV</p>
+                                    <p class="text-xs text-gray-500">10.2 L/100km</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="vehicle-card" onclick="selectVehicle('truck')" data-vehicle="truck">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-sm">Truck</p>
+                                    <p class="text-xs text-gray-500">14.5 L/100km</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="vehicle-card" onclick="selectVehicle('hybrid')" data-vehicle="hybrid">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-sm">Hybrid</p>
+                                    <p class="text-xs text-gray-500">4.8 L/100km</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<!-- VEHICLES -->
-<div class="grid grid-cols-2 gap-3 mb-6" id="vehicles"></div>
+                <!-- Route Inputs -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 fade-in" style="animation-delay: 0.1s">
+                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-map-marker-alt text-emerald-500 mr-2"></i>
+                        Route Planning
+                    </h3>
+                    
+                    <div class="space-y-3" id="waypoints">
+                        <div class="relative">
+                            <i class="fas fa-circle text-emerald-500 text-xs absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" value="Downtown Los Angeles, CA" placeholder="Start Location"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                        <div class="relative">
+                            <i class="fas fa-map-pin text-gray-400 text-xs absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" value="Santa Monica Pier, CA" placeholder="Stop 1"
+                                class="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            <button onclick="removeWaypoint(this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <i class="fas fa-map-pin text-gray-400 text-xs absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" value="Beverly Hills, CA" placeholder="Stop 2"
+                                class="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            <button onclick="removeWaypoint(this)" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <i class="fas fa-flag-checkered text-red-500 text-xs absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            <input type="text" value="Hollywood Hills, CA" placeholder="Destination"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                    </div>
+                    
+                    <button onclick="addWaypoint()" class="mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center transition hover:translate-x-1">
+                        <i class="fas fa-plus-circle mr-1"></i>
+                        Add Stop
+                    </button>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm text-gray-600">Fuel Price</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-emerald-600 font-semibold">$</span>
+                                <input type="number" id="fuelPrice" value="4.25" step="0.01" 
+                                    class="w-20 px-2 py-1 border border-gray-200 rounded-lg text-right font-semibold text-emerald-700 input-focus">
+                                <span class="text-sm text-gray-500">/gal</span>
+                            </div>
+                        </div>
+                        
+                        <button onclick="calculateRoute()" id="calcBtn"
+                            class="w-full btn-primary text-white font-semibold py-3 rounded-xl shadow-lg flex items-center justify-center space-x-2">
+                            <i class="fas fa-calculator"></i>
+                            <span>Optimize Route</span>
+                        </button>
+                    </div>
+                </div>
 
-<!-- INPUT -->
-<div class="bg-white p-4 rounded shadow mb-4">
-<input id="start" class="border p-2 w-full mb-2" placeholder="Start location">
-<input id="end" class="border p-2 w-full mb-2" placeholder="Destination">
-<input id="fuel" type="number" value="100" class="border p-2 w-full mb-2">
-
-<button onclick="calculate()" class="bg-green-600 text-white px-4 py-2 rounded w-full">
-Optimize Route
-</button>
-</div>
-
-<!-- ROUTES -->
-<div id="routes"></div>
-
-<!-- RESULT -->
-<div id="result" class="mt-4 text-lg font-semibold"></div>
-
-<script>
-const vehicles = {
- sedan:{name:"Sedan",consumption:7.5},
- suv:{name:"SUV",consumption:10},
- electric:{name:"EV",consumption:2}
-};
-
-let selectedVehicle = "sedan";
-
-function renderVehicles(){
- const el=document.getElementById("vehicles");
- el.innerHTML="";
- for(let key in vehicles){
-  el.innerHTML+=`
-   <div onclick="selectVehicle('${key}')" 
-    class="vehicle-card p-3 bg-white rounded shadow ${selectedVehicle===key?'selected':''}">
-    ${vehicles[key].name}
-   </div>`;
- }
-}
-
-function selectVehicle(v){
- selectedVehicle=v;
- renderVehicles();
-}
-
-function calculate(){
- let distance = Math.floor(Math.random()*50)+20;
-
- let fuelUsed = distance * vehicles[selectedVehicle].consumption / 100;
- let cost = fuelUsed * document.getElementById("fuel").value;
-
- let eco = cost * 0.8;
- let fast = cost * 1.2;
- let short = cost;
-
- document.getElementById("routes").innerHTML=`
-  <div onclick="choose('eco',${eco})" class="route-option p-3 bg-white rounded mb-2">Eco Route - ₹${eco.toFixed(2)}</div>
-  <div onclick="choose('fast',${fast})" class="route-option p-3 bg-white rounded mb-2">Fast Route - ₹${fast.toFixed(2)}</div>
-  <div onclick="choose('short',${short})" class="route-option p-3 bg-white rounded mb-2">Shortest Route - ₹${short.toFixed(2)}</div>
- `;
-}
-
-function choose(type,cost){
- document.getElementById("result").innerText=
-  "Selected "+type+" route. Cost: ₹"+cost.toFixed(2);
-}
-
-renderVehicles();
-</script>
-
-</body>
-</html>
+                <!-- Route Options -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 fade-in" style="animation-delay: 0.2s">
+                    <h3 class="font-semibold text-gray-800 mb-4">Route Options</h3>
+                    <div class="space-y-2" id="routeOptions">
+                        <div class="route-option active" onclick="selectRoute('eco')" data-route="eco">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                                        <i class="fas fa-leaf"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-sm text-gray-800">Eco-Friendly</p>
+                                        <p class="text-xs text-gray-500">Lowest fuel consumption</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-emerald-600">$12.45</p>
+                                    <p class="text-xs text-gray-500">45 min • 28 mi</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-center text-xs text-emerald-600 font-medium">
+                                <i class="fas fa-piggy-bank mr-1"></i>
+                                Save $2.75 (18%)
+                            </div>
+                        </div>
+                        
+                        <div class="route-option" onclick="selectRoute('fast')" data-route="fast">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-sm text-gray-800">Fastest</p>
+                                        <p class="text-xs text-gray-500">Shortest time</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-gray-800">$15.20</p>
+                                    <p class="text-xs text-gray-500">38 min • 32 mi</p>
+                                </div>
