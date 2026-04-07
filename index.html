@@ -9,175 +9,86 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-body { font-family: Arial, sans-serif; }
-.selected { border: 2px solid green; background: #ecfdf5; }
-.route-option.active { background: #ecfdf5; border-left: 4px solid green; }
+body { font-family: Arial; }
+.vehicle-card { cursor:pointer; transition:.3s }
+.vehicle-card.selected { border:2px solid green; background:#ecfdf5 }
+.route-option.active { border-left:4px solid green; background:#ecfdf5 }
 </style>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-50 p-6">
 
-<div class="max-w-5xl mx-auto p-6">
-
-<h1 class="text-2xl font-bold mb-4">Smart Route Optimizer 🚗</h1>
+<h1 class="text-2xl font-bold mb-4">🚗 Smart Route Optimizer</h1>
 
 <!-- VEHICLES -->
+<div class="grid grid-cols-2 gap-3 mb-6" id="vehicles"></div>
+
+<!-- INPUT -->
 <div class="bg-white p-4 rounded shadow mb-4">
-<h2 class="font-semibold mb-2">Select Vehicle</h2>
-<div id="vehicleGrid" class="grid grid-cols-3 gap-3"></div>
-</div>
+<input id="start" class="border p-2 w-full mb-2" placeholder="Start location">
+<input id="end" class="border p-2 w-full mb-2" placeholder="Destination">
+<input id="fuel" type="number" value="100" class="border p-2 w-full mb-2">
 
-<!-- ROUTE -->
-<div class="bg-white p-4 rounded shadow mb-4">
-<h2 class="font-semibold mb-2">Route</h2>
-
-<div id="waypoints"></div>
-
-<button onclick="addWaypoint()" class="text-green-600 mt-2">+ Add Stop</button>
-
-<div class="mt-4">
-Fuel Price:
-<input id="fuelPrice" type="number" value="4.25" class="border p-1 w-20">
-</div>
-
-<button onclick="calculateRoute()" class="mt-3 bg-green-600 text-white px-4 py-2 rounded">
+<button onclick="calculate()" class="bg-green-600 text-white px-4 py-2 rounded w-full">
 Optimize Route
 </button>
 </div>
 
-<!-- ROUTE OPTIONS -->
-<div class="bg-white p-4 rounded shadow mb-4">
-<h2 class="font-semibold mb-2">Route Options</h2>
-<div id="routeOptions"></div>
-</div>
+<!-- ROUTES -->
+<div id="routes"></div>
 
-<!-- MAP MOCK -->
-<div class="bg-white p-4 rounded shadow">
-<h2 class="font-semibold mb-2">Map</h2>
-
-<button onclick="toggleTraffic()" class="mr-2 bg-gray-200 px-2 py-1 rounded">Traffic</button>
-<button onclick="toggleElevation()" class="bg-gray-200 px-2 py-1 rounded">Elevation</button>
-
-<div class="h-64 mt-4 bg-green-50 flex items-center justify-center relative">
-
-<div id="trafficLayer" class="absolute hidden text-red-500">🚦 Traffic ON</div>
-<div id="elevationLayer" class="absolute hidden text-blue-500">⛰ Elevation ON</div>
-
-<span>Map Preview (Demo)</span>
-
-</div>
-</div>
-
-</div>
+<!-- RESULT -->
+<div id="result" class="mt-4 text-lg font-semibold"></div>
 
 <script>
+const vehicles = {
+ sedan:{name:"Sedan",consumption:7.5},
+ suv:{name:"SUV",consumption:10},
+ electric:{name:"EV",consumption:2}
+};
 
-// VEHICLES
-const vehicles = [
-{ name: "Car", mileage: 15 },
-{ name: "SUV", mileage: 10 },
-{ name: "Bike", mileage: 40 }
-];
+let selectedVehicle = "sedan";
 
-let selectedVehicle = null;
-
-const vehicleGrid = document.getElementById("vehicleGrid");
-
-vehicles.forEach((v, i) => {
-const div = document.createElement("div");
-div.className = "p-3 border rounded cursor-pointer";
-div.innerText = v.name + " (" + v.mileage + " km/l)";
-div.onclick = () => selectVehicle(i, div);
-vehicleGrid.appendChild(div);
-});
-
-function selectVehicle(i, el) {
-selectedVehicle = vehicles[i];
-
-document.querySelectorAll("#vehicleGrid div")
-.forEach(d => d.classList.remove("selected"));
-
-el.classList.add("selected");
+function renderVehicles(){
+ const el=document.getElementById("vehicles");
+ el.innerHTML="";
+ for(let key in vehicles){
+  el.innerHTML+=`
+   <div onclick="selectVehicle('${key}')" 
+    class="vehicle-card p-3 bg-white rounded shadow ${selectedVehicle===key?'selected':''}">
+    ${vehicles[key].name}
+   </div>`;
+ }
 }
 
-// WAYPOINTS
-const waypointsDiv = document.getElementById("waypoints");
-
-function addWaypoint() {
-const input = document.createElement("input");
-input.placeholder = "Enter location";
-input.className = "block border p-2 w-full mb-2";
-waypointsDiv.appendChild(input);
+function selectVehicle(v){
+ selectedVehicle=v;
+ renderVehicles();
 }
 
-// INITIAL
-addWaypoint();
-addWaypoint();
+function calculate(){
+ let distance = Math.floor(Math.random()*50)+20;
 
-// CALCULATE
-function calculateRoute() {
+ let fuelUsed = distance * vehicles[selectedVehicle].consumption / 100;
+ let cost = fuelUsed * document.getElementById("fuel").value;
 
-if (!selectedVehicle) {
-alert("Select vehicle first");
-return;
+ let eco = cost * 0.8;
+ let fast = cost * 1.2;
+ let short = cost;
+
+ document.getElementById("routes").innerHTML=`
+  <div onclick="choose('eco',${eco})" class="route-option p-3 bg-white rounded mb-2">Eco Route - ₹${eco.toFixed(2)}</div>
+  <div onclick="choose('fast',${fast})" class="route-option p-3 bg-white rounded mb-2">Fast Route - ₹${fast.toFixed(2)}</div>
+  <div onclick="choose('short',${short})" class="route-option p-3 bg-white rounded mb-2">Shortest Route - ₹${short.toFixed(2)}</div>
+ `;
 }
 
-const fuelPrice = parseFloat(document.getElementById("fuelPrice").value);
-
-// MOCK distance
-const distance = Math.floor(Math.random() * 50) + 10;
-
-const fuelUsed = distance / selectedVehicle.mileage;
-const cost = fuelUsed * fuelPrice;
-
-const routes = [
-{ name: "Eco Route", distance, cost, type: "eco" },
-{ name: "Fast Route", distance: distance + 5, cost: cost + 2, type: "fast" },
-{ name: "Short Route", distance: distance - 3, cost: cost - 1, type: "short" }
-];
-
-renderRoutes(routes);
+function choose(type,cost){
+ document.getElementById("result").innerText=
+  "Selected "+type+" route. Cost: ₹"+cost.toFixed(2);
 }
 
-// RENDER ROUTES
-function renderRoutes(routes) {
-const container = document.getElementById("routeOptions");
-container.innerHTML = "";
-
-routes.forEach((r, i) => {
-const div = document.createElement("div");
-
-div.className = "p-3 border mb-2 cursor-pointer route-option";
-div.innerHTML = `
-<b>${r.name}</b><br>
-Distance: ${r.distance} km<br>
-Cost: $${r.cost.toFixed(2)}
-`;
-
-div.onclick = () => selectRoute(div);
-
-container.appendChild(div);
-});
-}
-
-function selectRoute(el) {
-document.querySelectorAll(".route-option")
-.forEach(d => d.classList.remove("active"));
-
-el.classList.add("active");
-}
-
-// TOGGLES
-function toggleTraffic() {
-const el = document.getElementById("trafficLayer");
-el.classList.toggle("hidden");
-}
-
-function toggleElevation() {
-const el = document.getElementById("elevationLayer");
-el.classList.toggle("hidden");
-}
-
+renderVehicles();
 </script>
 
 </body>
